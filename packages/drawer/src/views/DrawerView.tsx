@@ -25,7 +25,7 @@ type DrawerOptions = {
   overlayColor?: string;
   minSwipeDistance?: number;
   drawerPosition: 'left' | 'right';
-  drawerType: 'front' | 'back' | 'slide';
+  drawerType: 'front' | 'back' | 'slide' | 'permanent';
   drawerLockMode?: 'unlocked' | 'locked-closed' | 'locked-open';
   keyboardDismissMode?: 'on-drag' | 'none';
   drawerWidth: number | (() => number);
@@ -280,10 +280,23 @@ export default class DrawerView extends React.PureComponent<Props, State> {
           drawerType={drawerType}
           drawerPosition={this.props.navigationConfig.drawerPosition}
           sceneContainerStyle={sceneContainerStyle}
-          drawerStyle={{
-            backgroundColor: drawerBackgroundColor,
-            width: this.state.drawerWidth,
-          }}
+          // @ts-ignore
+          drawerStyle={[
+            {
+              backgroundColor: drawerBackgroundColor,
+              width: this.state.drawerWidth,
+            },
+            drawerType === 'permanent' &&
+              (this.props.navigationConfig.drawerPosition === 'left'
+                ? {
+                    borderRightColor: 'red',
+                    borderRightWidth: StyleSheet.hairlineWidth,
+                  }
+                : {
+                    borderLeftColor: 'red',
+                    borderLeftWidth: StyleSheet.hairlineWidth,
+                  }),
+          ]}
           overlayStyle={{ backgroundColor: overlayColor }}
           swipeEdgeWidth={edgeWidth}
           swipeDistanceThreshold={minSwipeDistance}

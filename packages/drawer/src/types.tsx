@@ -58,7 +58,7 @@ export type NavigationDrawerConfig = {
   minSwipeDistance?: number;
   drawerWidth?: number | (() => number);
   drawerPosition?: 'left' | 'right';
-  drawerType?: 'front' | 'back' | 'slide';
+  drawerType?: 'front' | 'back' | 'slide' | 'permanent';
   drawerLockMode?: DrawerLockMode;
   keyboardDismissMode?: 'none' | 'on-drag';
   swipeEdgeWidth?: number;
