@@ -20,7 +20,7 @@ export type Scene = {
 export type NavigationDrawerState = NavigationState & {
   isDrawerOpen: boolean;
 };
-
+//todo
 export type NavigationDrawerProp<
   State = NavigationRoute,
   Params = NavigationParams
