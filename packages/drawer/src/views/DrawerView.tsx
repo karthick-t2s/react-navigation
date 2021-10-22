@@ -289,11 +289,11 @@ export default class DrawerView extends React.PureComponent<Props, State> {
             drawerType === 'permanent' &&
               (this.props.navigationConfig.drawerPosition === 'left'
                 ? {
-                    borderRightColor: 'red',
+                    borderRightColor: '#D0D7DE',
                     borderRightWidth: StyleSheet.hairlineWidth,
                   }
                 : {
-                    borderLeftColor: 'red',
+                    borderLeftColor: '#D0D7DE',
                     borderLeftWidth: StyleSheet.hairlineWidth,
                   }),
           ]}
