@@ -20,7 +20,7 @@ export type Scene = {
 export type NavigationDrawerState = NavigationState & {
   isDrawerOpen: boolean;
 };
-
+//todo
 export type NavigationDrawerProp<
   State = NavigationRoute,
   Params = NavigationParams
@@ -58,7 +58,7 @@ export type NavigationDrawerConfig = {
   minSwipeDistance?: number;
   drawerWidth?: number | (() => number);
   drawerPosition?: 'left' | 'right';
-  drawerType?: 'front' | 'back' | 'slide';
+  drawerType?: 'front' | 'back' | 'slide' | 'permanent';
   drawerLockMode?: DrawerLockMode;
   keyboardDismissMode?: 'none' | 'on-drag';
   swipeEdgeWidth?: number;

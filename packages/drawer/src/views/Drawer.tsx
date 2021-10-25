@@ -67,6 +67,7 @@ const SPRING_CONFIG = {
   restDisplacementThreshold: 0.01,
   restSpeedThreshold: 0.01,
 };
+const ANIMATED_ONE = new Animated.Value(1);
 
 type Binary = 0 | 1;
 
@@ -79,7 +80,7 @@ type Props = {
   onGestureRef?: (ref: PanGestureHandler | null) => void;
   gestureEnabled: boolean;
   drawerPosition: 'left' | 'right';
-  drawerType: 'front' | 'back' | 'slide';
+  drawerType: 'front' | 'back' | 'slide' | 'permanent';
   keyboardDismissMode: 'none' | 'on-drag';
   swipeEdgeWidth: number;
   swipeDistanceThreshold?: number;
@@ -493,6 +494,7 @@ export default class Drawer extends React.PureComponent<Props> {
       gestureHandlerProps,
     } = this.props;
 
+    const isOpen = drawerType === 'permanent' ? true : open;
     const right = drawerPosition === 'right';
 
     const contentTranslateX = drawerType === 'front' ? 0 : this.translateX;
@@ -510,11 +512,13 @@ export default class Drawer extends React.PureComponent<Props> {
     const hitSlop = right
       ? // Extend hitSlop to the side of the screen when drawer is closed
         // This lets the user drag the drawer from the side of the screen
-        { right: 0, width: open ? undefined : swipeEdgeWidth }
-      : { left: 0, width: open ? undefined : swipeEdgeWidth };
+        { right: 0, width: isOpen ? undefined : swipeEdgeWidth }
+      : { left: 0, width: isOpen ? undefined : swipeEdgeWidth };
+
+    const progress = drawerType === 'permanent' ? ANIMATED_ONE : this.progress;
 
     return (
-      <DrawerProgressContext.Provider value={this.progress}>
+      <DrawerProgressContext.Provider value={progress}>
         <PanGestureHandler
           ref={onGestureRef}
           activeOffsetX={[-SWIPE_DISTANCE_MINIMUM, SWIPE_DISTANCE_MINIMUM]}
@@ -522,76 +526,94 @@ export default class Drawer extends React.PureComponent<Props> {
           onGestureEvent={this.handleGestureEvent}
           onHandlerStateChange={this.handleGestureStateChange}
           hitSlop={hitSlop}
-          enabled={gestureEnabled}
+          enabled={drawerType !== 'permanent' && gestureEnabled}
           {...gestureHandlerProps}
         >
           <Animated.View
             onLayout={this.handleContainerLayout}
-            style={styles.main}
+            style={[
+              styles.main,
+              {
+                flexDirection:
+                  drawerType === 'permanent' && !right ? 'row-reverse' : 'row',
+              },
+            ]}
           >
             <Animated.View
               style={[
                 styles.content,
-                {
+                drawerType !== 'permanent' && {
                   transform: [{ translateX: contentTranslateX }],
                 },
                 sceneContainerStyle as any,
               ]}
-              importantForAccessibility={open ? 'no-hide-descendants' : 'yes'}
+              importantForAccessibility={isOpen ? 'no-hide-descendants' : 'yes'}
             >
-              {renderSceneContent({ progress: this.progress })}
-              <TapGestureHandler
-                enabled={gestureEnabled}
-                onHandlerStateChange={this.handleTapStateChange}
-              >
-                <Animated.View
-                  style={[
-                    styles.overlay,
-                    {
-                      opacity: interpolate(this.progress, {
-                        inputRange: [PROGRESS_EPSILON, 1],
-                        outputRange: [0, 1],
-                      }),
-                      // We don't want the user to be able to press through the overlay when drawer is open
-                      // One approach is to adjust the pointerEvents based on the progress
-                      // But we can also send the overlay behind the screen, which works, and is much less code
-                      zIndex: cond(
-                        greaterThan(this.progress, PROGRESS_EPSILON),
-                        0,
-                        -1
-                      ),
-                    },
-                    overlayStyle,
-                  ]}
-                />
-              </TapGestureHandler>
+              {renderSceneContent({ progress })}
+              {drawerType === 'permanent' ? null : (
+                <TapGestureHandler
+                  enabled={gestureEnabled}
+                  onHandlerStateChange={this.handleTapStateChange}
+                >
+                  <Animated.View
+                    style={[
+                      styles.overlay,
+                      {
+                        opacity: interpolate(progress, {
+                          inputRange: [PROGRESS_EPSILON, 1],
+                          outputRange: [0, 1],
+                        }),
+                        // We don't want the user to be able to press through the overlay when drawer is open
+                        // One approach is to adjust the pointerEvents based on the progress
+                        // But we can also send the overlay behind the screen, which works, and is much less code
+                        zIndex: cond(
+                          greaterThan(progress, PROGRESS_EPSILON),
+                          0,
+                          -1
+                        ),
+                      },
+                      overlayStyle,
+                    ]}
+                  />
+                </TapGestureHandler>
+              )}
             </Animated.View>
-            <Animated.Code
-              exec={block([
-                onChange(this.manuallyTriggerSpring, [
-                  cond(eq(this.manuallyTriggerSpring, TRUE), [
-                    set(this.nextIsOpen, FALSE),
-                    call([], () => (this.currentOpenValue = false)),
+            {drawerType === 'permanent' ? null : (
+              <Animated.Code
+                exec={block([
+                  onChange(this.manuallyTriggerSpring, [
+                    cond(eq(this.manuallyTriggerSpring, TRUE), [
+                      set(this.nextIsOpen, FALSE),
+                      call([], () => (this.currentOpenValue = false)),
+                    ]),
                   ]),
-                ]),
-              ])}
-            />
+                ])}
+              />
+            )}
             <Animated.View
-              accessibilityViewIsModal={open}
+              accessibilityViewIsModal={isOpen}
               removeClippedSubviews={Platform.OS !== 'ios'}
               onLayout={this.handleDrawerLayout}
               style={[
                 styles.container,
-                right ? { right: offset } : { left: offset },
-                {
-                  transform: [{ translateX: drawerTranslateX }],
-                  opacity: this.drawerOpacity,
-                  zIndex: drawerType === 'back' ? -1 : 0,
-                },
+                drawerType === 'permanent'
+                  ? // Without this, the `left`/`right` values don't get reset
+                    right
+                    ? { right: 0 }
+                    : { left: 0 }
+                  : [
+                      styles.nonPermanent,
+                      {
+                        transform: [{ translateX: drawerTranslateX }],
+                        opacity: this.drawerOpacity,
+                      },
+                      right ? { right: offset } : { left: offset },
+                      { zIndex: drawerType === 'back' ? -1 : 0 },
+                    ],
                 drawerStyle as any,
               ]}
             >
-              {renderDrawerContent({ progress: this.progress })}
+              {renderDrawerContent({ progress })}
             </Animated.View>
           </Animated.View>
         </PanGestureHandler>
@@ -603,11 +625,13 @@ export default class Drawer extends React.PureComponent<Props> {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
+    maxWidth: '100%',
+  },
+  nonPermanent: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     width: '80%',
-    maxWidth: '100%',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
